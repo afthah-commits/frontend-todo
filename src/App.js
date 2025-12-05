@@ -3,16 +3,9 @@ import TaskForm from "./components/TaskForm";
 import TaskList from "./components/TaskList";
 import FilterBar from "./components/FilterBar";
 import "./styles.css";
+import axios from "axios";
 
-
-let nextId = 1;
-
-function sampleTasks() {
-  return [
-    { id: nextId++, title: "Buy groceries", completed: false },
-    { id: nextId++, title: "Read documentation", completed: true }
-  ];
-}
+const API_URL = "https://backend-todo-owr5.onrender.com/api/tasks/";
 
 function filterTasks(tasks, filter) {
   if (filter === "completed") return tasks.filter(t => t.completed);
@@ -25,31 +18,46 @@ export default function App() {
   const [filter, setFilter] = useState("all");
   const [editingTask, setEditingTask] = useState(null);
 
-  // Load mock data on mount
   useEffect(() => {
-    setTasks(sampleTasks());
+    axios
+      .get(API_URL)
+      .then(res => setTasks(res.data))
+      .catch(err => console.error("GET error:", err));
   }, []);
 
   const addTask = (task) => {
-    task.id = nextId++;
-    setTasks(prev => [task, ...prev]);
+    axios
+      .post(API_URL, task)
+      .then(res => {
+        setTasks(prev => [res.data, ...prev]);
+      })
+      .catch(err => console.error("POST error:", err));
   };
 
   const updateTask = (updated) => {
-    setTasks(prev => prev.map(t => (t.id === updated.id ? updated : t)));
-    setEditingTask(null);
+    axios
+      .put(`${API_URL}${updated.id}/`, updated)
+      .then(res => {
+        setTasks(prev => prev.map(t => (t.id === updated.id ? res.data : t)));
+        setEditingTask(null);
+      })
+      .catch(err => console.error("PUT error:", err));
   };
 
   const deleteTask = (id) => {
-    setTasks(prev => prev.filter(t => t.id !== id));
+    axios
+      .delete(`${API_URL}${id}/`)
+      .then(() => setTasks(prev => prev.filter(t => t.id !== id)))
+      .catch(err => console.error("DELETE error:", err));
   };
 
   const toggleTask = (task) => {
-    setTasks(prev =>
-      prev.map(t =>
-        t.id === task.id ? { ...t, completed: !t.completed } : t
-      )
-    );
+    axios
+      .put(`${API_URL}${task.id}/`, { ...task, completed: !task.completed })
+      .then(res => {
+        setTasks(prev => prev.map(t => (t.id === task.id ? res.data : t)));
+      })
+      .catch(err => console.error("Toggle error:", err));
   };
 
   const visibleTasks = filterTasks(tasks, filter);
